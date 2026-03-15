@@ -7,7 +7,12 @@
       "Bash(npm whoami:*)",
       "Bash(npm login:*)",
       "Bash(npm publish:*)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Read(//Users/huhaiching/.gemini/**)",
+      "Read(//Users/huhaiching/**)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.openclaw.ai)"
     ]
   }
 }
