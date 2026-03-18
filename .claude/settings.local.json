@@ -12,7 +12,8 @@
       "Read(//Users/huhaiching/**)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:docs.openclaw.ai)"
+      "WebFetch(domain:docs.openclaw.ai)",
+      "Bash(chmod:*)"
     ]
   }
 }
