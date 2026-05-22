@@ -76,6 +76,129 @@ description: 使用 gws CLI 製作或操作 Google Slides 簡報時的完整參�
 
 ---
 
+## 表格版面設計模式
+
+當內容有「分類 × 日期」或「分類 × 分類」結構時，用手工格線 + 文字框模擬表格（勿用 Google Slides API 的 createTable，樣式難控制）。
+
+### 設計原則
+- **欄** = 類別（電力｜點光源｜軟體）
+- **列** = 日期或階段（6/1-4｜6/8）
+- **欄標題**：黃色 10pt Bold，Noto Sans TC（中文）+ Space Grotesk（英文副標 dim）
+- **列標題**：黃底黑字 pill，10pt Bold，居中
+- **表格內文**：灰色 8pt Bold，Noto Sans TC
+- **格線**：`#383838`（LINE_C），寬 0.75pt RECTANGLE，outline NOT_RENDERED
+
+### 格線 helper
+```python
+LINE_C = {'red': 0.22, 'green': 0.22, 'blue': 0.22}
+
+def hline(oid, x, y, w, sid):
+    reqs = []
+    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'RECTANGLE',
+        'elementProperties': ep(x, y, w, 0.75, sid)}})
+    reqs.append({'updateShapeProperties': {'objectId': oid,
+        'shapeProperties': {
+            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': LINE_C}}},
+            'outline': {'propertyState': 'NOT_RENDERED'}},
+        'fields': 'shapeBackgroundFill,outline'}})
+    return reqs
+
+def vline(oid, x, y, h, sid):
+    reqs = []
+    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'RECTANGLE',
+        'elementProperties': ep(x, y, 0.75, h, sid)}})
+    reqs.append({'updateShapeProperties': {'objectId': oid,
+        'shapeProperties': {
+            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': LINE_C}}},
+            'outline': {'propertyState': 'NOT_RENDERED'}},
+        'fields': 'shapeBackgroundFill,outline'}})
+    return reqs
+```
+
+### 欄標題 helper
+```python
+def cat_header(oid, x, y, w, cn, en, sid):
+    """黃色欄標題：中文 10pt bold yellow + 英文 7pt dim"""
+    full = f'{cn}  {en}'
+    reqs = []
+    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
+        'elementProperties': ep(x, y, w, 20, sid)}})
+    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': full}})
+    reqs.append({'updateTextStyle': {'objectId': oid,
+        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(10), 'bold': True,
+                  'foregroundColor': rgb(YELLOW)},
+        'textRange': {'type': 'FIXED_RANGE', 'startIndex': 0, 'endIndex': len(cn)},
+        'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+    reqs.append({'updateTextStyle': {'objectId': oid,
+        'style': {'fontFamily': 'Space Grotesk', 'fontSize': pt(7), 'bold': False,
+                  'foregroundColor': rgb(DIM)},
+        'textRange': {'type': 'FIXED_RANGE', 'startIndex': len(cn), 'endIndex': len(full)},
+        'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+    reqs.append({'updateShapeProperties': {'objectId': oid,
+        'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'},
+                            'contentAlignment': 'MIDDLE'},
+        'fields': 'shapeBackgroundFill,contentAlignment'}})
+    reqs.append({'updateParagraphStyle': {'objectId': oid,
+        'style': {'lineSpacing': 100, 'alignment': 'START'},
+        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,alignment'}})
+    return reqs
+```
+
+### 列標題 pill helper（黃底黑字）
+```python
+def date_pill(oid, x, y, w, line1, line2, sid):
+    text = f'{line1}\n{line2}' if line2 else line1
+    reqs = []
+    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
+        'elementProperties': ep(x, y, w, 32 if line2 else 18, sid)}})
+    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': text}})
+    reqs.append({'updateTextStyle': {'objectId': oid,
+        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(10), 'bold': True,
+                  'foregroundColor': rgb(DARK)},   # DARK = #1A1A1A
+        'textRange': {'type': 'ALL'}, 'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+    reqs.append({'updateShapeProperties': {'objectId': oid,
+        'shapeProperties': {
+            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': YELLOW}}},
+            'contentAlignment': 'MIDDLE'},
+        'fields': 'shapeBackgroundFill,contentAlignment'}})
+    reqs.append({'updateParagraphStyle': {'objectId': oid,
+        'style': {'lineSpacing': 115, 'alignment': 'CENTER'},
+        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,alignment'}})
+    return reqs
+```
+
+### 表格內文 helper（8pt Bold 灰）
+```python
+def task_box(oid, x, y, w, h, text, sid):
+    reqs = []
+    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
+        'elementProperties': ep(x, y, w, h, sid)}})
+    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': text}})
+    reqs.append({'updateTextStyle': {'objectId': oid,
+        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(8), 'bold': True,
+                  'foregroundColor': rgb(GRAY)},
+        'textRange': {'type': 'ALL'}, 'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+    reqs.append({'updateParagraphStyle': {'objectId': oid,
+        'style': {'lineSpacing': 145, 'spaceAbove': pt(0), 'spaceBelow': pt(4),
+                  'alignment': 'START'},
+        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,spaceAbove,spaceBelow,alignment'}})
+    reqs.append({'updateShapeProperties': {'objectId': oid,
+        'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'},
+                            'contentAlignment': 'TOP'},
+        'fields': 'shapeBackgroundFill,contentAlignment'}})
+    return reqs
+```
+
+### 透明背景（必要時）
+```python
+# 讓文字框背景透明（不遮住底層元素）
+{'updateShapeProperties': {'objectId': oid,
+    'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'}},
+    'fields': 'shapeBackgroundFill'}}
+```
+
+---
+
 ## 重要執行規則
 
 **所有 batchUpdate 必須用 Python subprocess 執行，不得用 shell 直接帶 JSON：**
