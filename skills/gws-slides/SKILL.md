@@ -78,120 +78,89 @@ description: 使用 gws CLI 製作或操作 Google Slides 簡報時的完整參�
 
 ## 表格版面設計模式
 
-當內容有「分類 × 日期」或「分類 × 分類」結構時，用手工格線 + 文字框模擬表格（勿用 Google Slides API 的 createTable，樣式難控制）。
+**用 `createTable` 製作真正的表格**，不要用手工格線 + 文字框模擬。`createTable` 支援完整的樣式控制，效果更乾淨。
 
-### 設計原則
-- **欄** = 類別（電力｜點光源｜軟體）
-- **列** = 日期或階段（6/1-4｜6/8）
-- **欄標題**：黃色 10pt Bold，Noto Sans TC（中文）+ Space Grotesk（英文副標 dim）
-- **列標題**：黃底黑字 pill，10pt Bold，居中
-- **表格內文**：灰色 8pt Bold，Noto Sans TC
-- **格線**：`#383838`（LINE_C），寬 0.75pt RECTANGLE，outline NOT_RENDERED
+### 設計規範
+- **欄標題（header row）**：黃色 10pt Bold，Noto Sans TC（中文）+ Space Grotesk 7pt dim（英文副標）
+- **列標題（date/row header）**：黃色 10pt Bold，居中，稍深背景 `HDR_BG`
+- **表格內文**：灰色 **8pt Bold**，Noto Sans TC
+- **Header row 背景**：`#262626`（HDR_BG = 0.15/0.15/0.15）
+- **內文 cell 背景**：`#1A1A1A`（DARK，與投影片背景同色）
+- **內框線**：`#383838`（LINE_C），0.75pt
+- **外框線**：`#2E2E2E`（EDGE_C），0.5pt
 
-### 格線 helper
+### 完整 createTable 流程
+
 ```python
 LINE_C = {'red': 0.22, 'green': 0.22, 'blue': 0.22}
+EDGE_C = {'red': 0.18, 'green': 0.18, 'blue': 0.18}
+HDR_BG = {'red': 0.15, 'green': 0.15, 'blue': 0.15}
 
-def hline(oid, x, y, w, sid):
-    reqs = []
-    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'RECTANGLE',
-        'elementProperties': ep(x, y, w, 0.75, sid)}})
-    reqs.append({'updateShapeProperties': {'objectId': oid,
-        'shapeProperties': {
-            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': LINE_C}}},
-            'outline': {'propertyState': 'NOT_RENDERED'}},
-        'fields': 'shapeBackgroundFill,outline'}})
-    return reqs
+# 1. 建立表格
+requests.append({'createTable': {
+    'objectId': 'my_table',          # 最少 5 個字元
+    'elementProperties': ep(X, Y, W, H, SLIDE_ID),
+    'rows': 3, 'columns': 4}})
 
-def vline(oid, x, y, h, sid):
-    reqs = []
-    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'RECTANGLE',
-        'elementProperties': ep(x, y, 0.75, h, sid)}})
-    reqs.append({'updateShapeProperties': {'objectId': oid,
-        'shapeProperties': {
-            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': LINE_C}}},
-            'outline': {'propertyState': 'NOT_RENDERED'}},
-        'fields': 'shapeBackgroundFill,outline'}})
-    return reqs
+# 2. 設定欄寬
+requests.append({'updateTableColumnProperties': {
+    'objectId': 'my_table', 'columnIndices': [0],
+    'tableColumnProperties': {'columnWidth': pt(62)},
+    'fields': 'columnWidth'}})
+
+# 3. 設定列高
+requests.append({'updateTableRowProperties': {
+    'objectId': 'my_table', 'rowIndices': [0],
+    'tableRowProperties': {'minRowHeight': pt(24)},
+    'fields': 'minRowHeight'}})
+
+# 4. 設定格線（INNER / OUTER 分開設）
+requests.append({'updateTableBorderProperties': {
+    'objectId': 'my_table',
+    'tableRange': {'location': {'rowIndex': 0, 'columnIndex': 0},
+                   'rowSpan': 3, 'columnSpan': 4},
+    'borderPosition': 'INNER',       # 或 'OUTER' / 'ALL'
+    'tableBorderProperties': {
+        'tableBorderFill': {'solidFill': {'color': {'rgbColor': LINE_C}}},
+        'weight': pt(0.75), 'dashStyle': 'SOLID'},
+    'fields': 'tableBorderFill,weight,dashStyle'}})
+
+# 5. 設定 cell 背景 & 垂直對齊
+requests.append({'updateTableCellProperties': {
+    'objectId': 'my_table',
+    'tableRange': {'location': {'rowIndex': 0, 'columnIndex': 0},
+                   'rowSpan': 1, 'columnSpan': 1},
+    'tableCellProperties': {
+        'tableCellBackgroundFill': {'solidFill': {'color': {'rgbColor': HDR_BG}}},
+        'contentAlignment': 'MIDDLE'},   # TOP / MIDDLE / BOTTOM
+    'fields': 'tableCellBackgroundFill,contentAlignment'}})
+
+# 6. 在 cell 插入文字（需指定 cellLocation）
+requests.append({'insertText': {
+    'objectId': 'my_table',
+    'cellLocation': {'rowIndex': 0, 'columnIndex': 1},
+    'insertionIndex': 0, 'text': '電力  Electrical'}})
+
+# 7. 設定 cell 文字樣式（需指定 cellLocation）
+requests.append({'updateTextStyle': {
+    'objectId': 'my_table',
+    'cellLocation': {'rowIndex': 0, 'columnIndex': 1},
+    'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(10), 'bold': True,
+              'foregroundColor': rgb(YELLOW)},
+    'textRange': {'type': 'FIXED_RANGE', 'startIndex': 0, 'endIndex': 2},
+    'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+
+# 8. 設定 cell 段落樣式（需指定 cellLocation）
+requests.append({'updateParagraphStyle': {
+    'objectId': 'my_table',
+    'cellLocation': {'rowIndex': 0, 'columnIndex': 1},
+    'style': {'alignment': 'START', 'lineSpacing': 100},
+    'textRange': {'type': 'ALL'},
+    'fields': 'alignment,lineSpacing'}})
 ```
 
-### 欄標題 helper
+### 透明背景（文字框用，非 table cell）
 ```python
-def cat_header(oid, x, y, w, cn, en, sid):
-    """黃色欄標題：中文 10pt bold yellow + 英文 7pt dim"""
-    full = f'{cn}  {en}'
-    reqs = []
-    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
-        'elementProperties': ep(x, y, w, 20, sid)}})
-    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': full}})
-    reqs.append({'updateTextStyle': {'objectId': oid,
-        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(10), 'bold': True,
-                  'foregroundColor': rgb(YELLOW)},
-        'textRange': {'type': 'FIXED_RANGE', 'startIndex': 0, 'endIndex': len(cn)},
-        'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
-    reqs.append({'updateTextStyle': {'objectId': oid,
-        'style': {'fontFamily': 'Space Grotesk', 'fontSize': pt(7), 'bold': False,
-                  'foregroundColor': rgb(DIM)},
-        'textRange': {'type': 'FIXED_RANGE', 'startIndex': len(cn), 'endIndex': len(full)},
-        'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
-    reqs.append({'updateShapeProperties': {'objectId': oid,
-        'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'},
-                            'contentAlignment': 'MIDDLE'},
-        'fields': 'shapeBackgroundFill,contentAlignment'}})
-    reqs.append({'updateParagraphStyle': {'objectId': oid,
-        'style': {'lineSpacing': 100, 'alignment': 'START'},
-        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,alignment'}})
-    return reqs
-```
-
-### 列標題 pill helper（黃底黑字）
-```python
-def date_pill(oid, x, y, w, line1, line2, sid):
-    text = f'{line1}\n{line2}' if line2 else line1
-    reqs = []
-    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
-        'elementProperties': ep(x, y, w, 32 if line2 else 18, sid)}})
-    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': text}})
-    reqs.append({'updateTextStyle': {'objectId': oid,
-        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(10), 'bold': True,
-                  'foregroundColor': rgb(DARK)},   # DARK = #1A1A1A
-        'textRange': {'type': 'ALL'}, 'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
-    reqs.append({'updateShapeProperties': {'objectId': oid,
-        'shapeProperties': {
-            'shapeBackgroundFill': {'solidFill': {'color': {'rgbColor': YELLOW}}},
-            'contentAlignment': 'MIDDLE'},
-        'fields': 'shapeBackgroundFill,contentAlignment'}})
-    reqs.append({'updateParagraphStyle': {'objectId': oid,
-        'style': {'lineSpacing': 115, 'alignment': 'CENTER'},
-        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,alignment'}})
-    return reqs
-```
-
-### 表格內文 helper（8pt Bold 灰）
-```python
-def task_box(oid, x, y, w, h, text, sid):
-    reqs = []
-    reqs.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX',
-        'elementProperties': ep(x, y, w, h, sid)}})
-    reqs.append({'insertText': {'objectId': oid, 'insertionIndex': 0, 'text': text}})
-    reqs.append({'updateTextStyle': {'objectId': oid,
-        'style': {'fontFamily': 'Noto Sans TC', 'fontSize': pt(8), 'bold': True,
-                  'foregroundColor': rgb(GRAY)},
-        'textRange': {'type': 'ALL'}, 'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
-    reqs.append({'updateParagraphStyle': {'objectId': oid,
-        'style': {'lineSpacing': 145, 'spaceAbove': pt(0), 'spaceBelow': pt(4),
-                  'alignment': 'START'},
-        'textRange': {'type': 'ALL'}, 'fields': 'lineSpacing,spaceAbove,spaceBelow,alignment'}})
-    reqs.append({'updateShapeProperties': {'objectId': oid,
-        'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'},
-                            'contentAlignment': 'TOP'},
-        'fields': 'shapeBackgroundFill,contentAlignment'}})
-    return reqs
-```
-
-### 透明背景（必要時）
-```python
-# 讓文字框背景透明（不遮住底層元素）
 {'updateShapeProperties': {'objectId': oid,
     'shapeProperties': {'shapeBackgroundFill': {'propertyState': 'NOT_RENDERED'}},
     'fields': 'shapeBackgroundFill'}}
