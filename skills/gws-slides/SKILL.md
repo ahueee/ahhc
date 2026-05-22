@@ -215,6 +215,14 @@ subprocess.run([
 
 > 原因：shell 會展開 `$`、`!` 等字元，破壞 JSON 內容。
 
+**Object ID 規則：**
+- 最短 5 個字元，否則 API 報錯（`length should not be less than 5`）
+- 例：`'t48'` → 改為 `'t48_title'`
+
+**段落對齊 enum：**
+- ✅ `'START'`（左對齊）、`'CENTER'`、`'END'`（右對齊）、`'JUSTIFIED'`
+- ❌ `'LEFT'` / `'RIGHT'` → API 會報 invalid enum 錯誤
+
 ---
 
 ## 讀取簡報
