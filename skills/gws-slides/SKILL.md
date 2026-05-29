@@ -88,8 +88,8 @@ for prefix, slide_id, num, en, cn in sections:
         make_textbox(f"{prefix}_c", slide_id, 1728000, 2606400, SLIDE_W - 1728000, 3000000, cn,  24, WHITE),
     ]
 
-# ❌ 錯誤寫法（3000000 EMU = 236pt，太窄，長英文字會被折行）
-# make_textbox(..., width=3000000, ...)
+# ❌ 錯誤寫法：width 太窄（折行）、height 太高（難編輯）
+# make_textbox(..., width=3000000, height=3000000, ...)
 ```
 
 建立後若已發現換行，用 `updatePageElementTransform` 修正 scaleX：
