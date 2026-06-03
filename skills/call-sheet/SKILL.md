@@ -170,6 +170,44 @@ def fmt_req(sheet_id, row_s, row_e, col_s, col_e, bg, bold):
 6. **點餐統整人員清單**：必須包含當天所有來的人，含外發。例如有 2 位浩宇就寫兩列「浩宇」（一列一人，這樣餐點數量才對）。
 7. **人員欄外發廠商紅字**：F 欄的人員 cell 若有「浩宇」「青田」等外發廠商名稱，要用 `updateCells` + `textFormatRuns` 把這些字串標成深紅色 2（`#990000` ≈ rgb 0.6, 0, 0）。
 
+8. **新增時間表列必須補上合併儲存格**（容易忘記）：
+   時間表的每一列在範本中都有以下合併：
+   - **工序欄** B:E（c2-c5）
+   - **人員欄** F:H（c6-c8）
+   - **設備欄** I:K（c9-c11）
+
+   用 `insertDimension` 插入新列時 API **不會自動複製合併**，你必須用 `mergeCells` 三個 request 把新列補上合併，否則表格會破格。
+
+   ```python
+   def schedule_row_merges(sheet_id, row_idx):  # row_idx 是 0-based
+       return [
+           {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": row_idx, "endRowIndex": row_idx+1, "startColumnIndex": 1, "endColumnIndex": 5}, "mergeType": "MERGE_ALL"}},
+           {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": row_idx, "endRowIndex": row_idx+1, "startColumnIndex": 5, "endColumnIndex": 8}, "mergeType": "MERGE_ALL"}},
+           {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": row_idx, "endRowIndex": row_idx+1, "startColumnIndex": 8, "endColumnIndex": 11}, "mergeType": "MERGE_ALL"}},
+       ]
+   ```
+
+9. **點餐統整的廠商 section 結構**：
+   點餐統整每個「廠商」要有自己的 section，結構為：
+   - **M 欄**：廠商名稱（如「黑川」「青田」「浩宇」），以**縱向合併**橫跨該廠商所有人的 row 數
+   - **N 欄**：每位人員一格（廠商 header row 的 N 欄要放第一位人員，不要留空）
+   - 「**外發夥伴**」永遠是**最後一段**的 catch-all section，下面才放沒被歸類的人
+
+   範例（青田 2 人、浩宇 2 人）：
+   ```
+   M24=青田  N24=詹大       ← M24:M25 縱向合併
+            N25=阿 Ken
+   M26=浩宇  N26=浩宇(1)    ← M26:M27 縱向合併
+            N27=浩宇(2)
+   M28=外發夥伴             ← M28:M29 縱向合併（即使下面沒人也保留位置）
+   ```
+
+   **新增廠商時要做的事**：
+   - `unmergeCells` 原本「外發夥伴」的縱向合併
+   - 把「外發夥伴」往下移到新位置
+   - 為新廠商建立 M 欄縱向合併（橫跨他們的人數）
+   - 重新合併「外發夥伴」的新位置縱向合併
+
 ### 外發廠商紅字程式碼
 
 ```python
