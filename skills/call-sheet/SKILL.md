@@ -19,7 +19,10 @@ description: >
 
 - **模板 spreadsheet ID**：`1pEru-90wEpSDQGFOy32z2u2i322eCYGlVoeC-KcdUD8`
 - **模板名稱**：`（專案名稱）＿通告單 Template`
-- 目標 Drive 資料夾：依專案不同（地景藝術節資料夾 `1wda1tI_7hO3u08V6xUM0lTL_LX7FVc1i`、其他資料夾使用者會給）
+- **目標 Drive 資料夾**：**每個專案不同**，必須從使用者那邊取得：
+  - 使用者可能直接給 Drive 資料夾連結 → 從 URL 抽出 folder ID（`/folders/{ID}` 的 ID）
+  - 若沒給，問使用者：「要放到哪個資料夾？（Drive 連結或資料夾名稱）」
+  - 也可用 `gws drive files list` 用專案名搜尋資料夾
 - Notion 來源：通常是專案資料庫中的「工序安排」與「進場安裝」兩個頁面
 
 模板分頁結構：
