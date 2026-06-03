@@ -187,7 +187,30 @@ def fmt_req(sheet_id, row_s, row_e, col_s, col_e, bg, bold):
        ]
    ```
 
-9. **點餐統整的廠商 section 結構**：
+10. **時間表的午餐／晚餐 row 要上灰底**：
+    時間表中「工序欄為午餐或晚餐」的 row 整列要塗淺灰底 `#F0F0F0`（rgb 0.94, 0.94, 0.94，與人員總表「x」cell 同色），其他 row 不上底色。範圍是 A:K（從時間欄到設備欄）。
+
+    ```python
+    LIGHT_GREY = {"red": 0.94, "green": 0.94, "blue": 0.94}
+    {"repeatCell": {
+        "range": {"sheetId": sid, "startRowIndex": meal_row-1, "endRowIndex": meal_row,
+                  "startColumnIndex": 0, "endColumnIndex": 11},
+        "cell": {"userEnteredFormat": {"backgroundColor": LIGHT_GREY}},
+        "fields": "userEnteredFormat.backgroundColor",
+    }}
+    ```
+
+11. **餐食人數要自己算，寫進 F 欄**（替換模板的「＿位」）：
+    從人員總表的 call time 推算：「在該餐時段有上班的人」就要吃。
+
+    算法：
+    - 解析每個人那天的 call time（如 `9:00 - 21:00`）；若是 `x` 或空白則跳過；若是 `待確認` 則該餐記「待確認」
+    - 該餐時段（例如午餐 12:00-13:00 或 13:00-14:00）若落在某人的 call 時間區間內，他就算一位
+    - **浩宇、青田這種「廠商」要算成多人**（依該廠商實際人數，例如「浩宇 *2 = 2 位」），不要只算一位
+    - **縉祥不算**（不在點餐統整內）
+    - 結果寫成「N 位」格式（如「8 位」、「3 位」），全員不到場時寫「待確認」或「0 位」
+
+12. **點餐統整的廠商 section 結構**：
    點餐統整每個「廠商」要有自己的 section，結構為：
    - **M 欄**：廠商名稱（如「黑川」「青田」「浩宇」），以**縱向合併**橫跨該廠商所有人的 row 數
    - **N 欄**：每位人員一格（廠商 header row 的 N 欄要放第一位人員，不要留空）
