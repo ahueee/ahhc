@@ -215,19 +215,21 @@ for i, slide in enumerate(data['slides'][:10]):
 
 ### 3-3 填寫說明區塊
 
-使用 `notion-update-page`（update_content 命令），替換樣板中的說明 table：
+**前提**：3-1 已確認樣板結構實際出現在 content 中（不是空白快取）。
 
-```
-### 《[artwork_name]》
-<table>
-  <tr><td>場地</td><td>[venue]</td></tr>
-  <tr><td>展期</td><td>[dates]</td></tr>
-  <tr><td>尺寸</td><td>[dimensions]</td></tr>
-  <tr><td>媒材</td><td>[materials]</td></tr>
-  <tr><td>作品介紹</td><td>[description]</td></tr>
-  <tr><td>Credit</td><td></td></tr>
-</table>
-```
+一律用 `notion-update-page` 的 **`update_content` 命令**（search-and-replace），**針對樣板既有的 placeholder 做替換**，把作品資訊填進樣板原本的 `說明` table。
+
+- 標題：把 `### 《作品名稱》` 替換成 `### 《[artwork_name]》`
+- table：把各列右欄的空 cell（`<td></td>`）替換成對應內容（場地／展期／尺寸／媒材／作品介紹／Credit）
+
+> **不要用 `replace_content` 整頁覆寫**。原因：
+> 1. 若樣板尚未套完，`replace_content` 會與稍後補上的樣板骨架疊成兩份 → 產生重複區塊。
+> 2. 使用者可能已在頁面加了照片、填了欄位；整頁覆寫會蓋掉他的編輯。
+>
+> `update_content` 只動你指定的 placeholder，安全得多。
+
+**萬一還是出現重複區塊**（頁尾多一份空的 `說明《作品名稱》/ 影片 / 照片 / 連結參考`）：
+用 `update_content` 把「頁尾那份空樣板」整段當 `old_str`、`new_str` 設為空字串刪除；錨點用 `### 《作品名稱》`（只會出現在未填的重複區）。刪除前先 `notion-fetch` 確認要刪的是空的那一份，**不要刪到已填內容的那一份**。
 
 ---
 
