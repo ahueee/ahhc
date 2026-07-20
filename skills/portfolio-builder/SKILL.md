@@ -54,60 +54,98 @@ description: >
 
 ## Step 2：Google Slides - 讀取簡報，判斷作品數量與內容
 
-這是本流程的核心步驟。目標是從簡報中找出：
+這是本流程的核心步驟，全程使用 **gws CLI**（不需開啟瀏覽器）。目標是從簡報中找出：
 1. **有幾件作品**（決定要建幾個 Notion 作品集頁面）
 2. **每件作品的名稱、場地、展期、尺寸、媒材、介紹**
 
-### 2-1 找到並讀取簡報
+> 所有 gws 指令一律用 **Python subprocess** 執行，`--params` / `--json` 帶 `json.dumps(...)`，
+> 不要用 shell 直接帶 JSON（避免 `$`、`!`、引號被 shell 展開破壞）。
 
-**Step A：用 Google Drive MCP 定位資料夾與 Slides 檔案**
+### 2-1 用 gws 定位專案資料夾與 Slides 檔案
 
-用 `google_drive_search` 找到專案資料夾：
+**Step A：找到專案資料夾**
+
+用 `gws drive files list` 搜尋名稱含 project_name 的資料夾：
+
+```python
+import subprocess, json
+
+def gws(args, params=None, body=None):
+    cmd = ['gws'] + args
+    if params is not None:
+        cmd += ['--params', json.dumps(params)]
+    if body is not None:
+        cmd += ['--json', json.dumps(body)]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return r.stdout
+
+# 搜尋專案資料夾
+out = gws(['drive', 'files', 'list'], params={
+    "q": f'name contains "{project_name}" and mimeType="application/vnd.google-apps.folder" and trashed=false',
+    "fields": "files(id,name,parents)",
+    "supportsAllDrives": "true",
+    "includeItemsFromAllDrives": "true"
+})
 ```
-api_query: name contains '[project_name]'
+
+從結果取得專案資料夾的 `folder_id`（若有多個，選最符合 project_name 的）。
+
+**Step B：在資料夾中找 Google Slides 檔案**
+
+直接在專案資料夾（含子資料夾）中搜尋簡報檔：
+
+```python
+# 先找該資料夾下的 Slides 檔
+out = gws(['drive', 'files', 'list'], params={
+    "q": f'"{folder_id}" in parents and mimeType="application/vnd.google-apps.presentation" and trashed=false',
+    "fields": "files(id,name,parents)",
+    "supportsAllDrives": "true",
+    "includeItemsFromAllDrives": "true"
+})
 ```
 
-找到資料夾後，搜尋其子資料夾（通常名為「簡報」、「proposal」、「presentation」）：
+> 若專案資料夾底下沒有直接的簡報檔，通常簡報放在子資料夾（名為「簡報」、「proposal」、「presentation」）。
+> 可先列出子資料夾（`mimeType="application/vnd.google-apps.folder"`），取得子資料夾 id 後再重複上面的查詢；
+> 或直接用 `name contains "{project_name}"` + presentation mimeType 全域搜尋。
+
+記下目標簡報的 `presentation_id`。若有多個簡報檔（例如「提案」「結案」），優先選最新／最完整的版本。
+
+### 2-2 用 gws 讀取簡報文字內容
+
+用 `gws slides presentations get` 取得完整簡報，並在 Python 中解析每頁文字：
+
+```python
+result = subprocess.run(
+    ['gws', 'slides', 'presentations', 'get',
+     '--params', json.dumps({"presentationId": presentation_id})],
+    capture_output=True, text=True
+)
+raw = result.stdout
+lines = raw.split('\n')
+j = next(i for i, l in enumerate(lines) if l.strip().startswith('{'))
+data = json.loads('\n'.join(lines[j:]))
+
+for i, slide in enumerate(data['slides']):
+    texts = []
+    for elem in slide.get('pageElements', []):
+        for run in elem.get('shape', {}).get('text', {}).get('textElements', []):
+            c = run.get('textRun', {}).get('content', '').strip()
+            if c:
+                texts.append(c)
+        # 表格內文字
+        for row in elem.get('table', {}).get('tableRows', []):
+            for cell in row.get('tableCells', []):
+                for run in cell.get('text', {}).get('textElements', []):
+                    c = run.get('textRun', {}).get('content', '').strip()
+                    if c:
+                        texts.append(c)
+    print(f"Slide {i+1}: {' | '.join(texts)}")
 ```
-api_query: '[folder_id]' in parents
-```
 
-在資料夾中進一步搜尋 Google Slides 檔案：
-```
-api_query: '[folder_id]' in parents and mimeType = 'application/vnd.google-apps.presentation'
-```
+> 這會印出每頁的所有文字（含表格）。重點看前 5-10 頁，通常作品名稱、場地、展期、尺寸、媒材、介紹都在前段。
+> 若簡報頁數多、資訊分散，把全部頁面文字都掃過一遍再判斷。
 
-> 搜尋結果若回傳 `application/vnd.google-apps.presentation` 類型的檔案，即為 Google Slides。記下其 `file_id`。
-
-**Step B：優先嘗試 Google Drive MCP 直接讀取（最快）**
-
-取得 Slides 的 `file_id` 後，使用 `google_drive_fetch` 嘗試讀取內容：
-
-```
-file_id: [slides_file_id]
-```
-
-Google Drive MCP 支援 Google Slides 的文字 export，若成功即可直接取得所有投影片的純文字內容，**完全不需要開啟瀏覽器**，速度最快。
-
-> **如果 `google_drive_fetch` 回傳內容**（即使是部分文字）→ 直接使用，跳過 Step C。
->
-> **如果 `google_drive_fetch` 失敗或回傳空內容** → 繼續 Step C。
-
-**Step C：Fallback — 用 Claude in Chrome 開啟並讀取（備案）**
-
-僅在 Step B 失敗時才使用此方法：
-
-1. 使用 `mcp__Claude_in_Chrome__tabs_context_mcp` 取得可用的 tab ID
-2. 使用 `mcp__Claude_in_Chrome__navigate` 前往 Step A 找到的資料夾 URL：
-   `https://drive.google.com/drive/folders/[folder_id]`
-3. 使用 `mcp__Claude_in_Chrome__get_page_text` 查看資料夾中的檔案列表，找到 Slides 檔案
-4. 用 `mcp__Claude_in_Chrome__navigate` 開啟 Slides 檔案
-5. 用 `mcp__Claude_in_Chrome__get_page_text` 讀取簡報文字內容（重點看前 5-10 頁）
-
-> Claude in Chrome 使用用戶的 Chrome 瀏覽器（已登入 Google 帳號），可正常開啟 Google Slides。
-> 若 Claude in Chrome 未連線，提示用戶確認 Chrome extension 已啟動後再繼續。
-
-### 2-2 判斷作品數量
+### 2-3 判斷作品數量
 
 讀取簡報後，判斷其中有幾件**獨立作品**：
 
