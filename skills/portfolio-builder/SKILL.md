@@ -90,12 +90,12 @@ out = gws(['drive', 'files', 'list'], params={
 
 從結果取得專案資料夾的 `folder_id`（若有多個，選最符合 project_name 的）。
 
-**Step B：在資料夾中找 Google Slides 檔案**
+**Step B：在專案資料夾中找 Google Slides 檔案**
 
-直接在專案資料夾（含子資料夾）中搜尋簡報檔：
+簡報**直接放在專案資料夾底下**（資料夾名稱本身也含 project_name），直接查該資料夾即可：
 
 ```python
-# 先找該資料夾下的 Slides 檔
+# 專案資料夾下的 Slides 檔
 out = gws(['drive', 'files', 'list'], params={
     "q": f'"{folder_id}" in parents and mimeType="application/vnd.google-apps.presentation" and trashed=false',
     "fields": "files(id,name,parents)",
@@ -104,11 +104,10 @@ out = gws(['drive', 'files', 'list'], params={
 })
 ```
 
-> 若專案資料夾底下沒有直接的簡報檔，通常簡報放在子資料夾（名為「簡報」、「proposal」、「presentation」）。
-> 可先列出子資料夾（`mimeType="application/vnd.google-apps.folder"`），取得子資料夾 id 後再重複上面的查詢；
-> 或直接用 `name contains "{project_name}"` + presentation mimeType 全域搜尋。
-
 記下目標簡報的 `presentation_id`。若有多個簡報檔（例如「提案」「結案」），優先選最新／最完整的版本。
+
+> 備案：若 Step A 找資料夾不順（同名多筆），也可跳過資料夾直接全域搜尋簡報：
+> `name contains "{project_name}" and mimeType="application/vnd.google-apps.presentation"`。
 
 ### 2-2 用 gws 讀取簡報文字內容
 
