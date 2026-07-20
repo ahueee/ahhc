@@ -190,7 +190,15 @@ for i, slide in enumerate(data['slides'][:10]):
 - `template_id`：「作品集樣板」的 template_id
 - `properties`: `Name` 設為上述 page_title
 
-記下 **portfolio_page_id** 備用。樣板套用非同步，建立後稍等 3-5 秒。
+記下 **portfolio_page_id** 備用。
+
+> **⚠️ 樣板套用是非同步的——務必先確認套用完成再寫內容（否則會出現重複區塊）**
+>
+> Notion 套用 template 是背景作業，且 `notion-fetch` 在建立後短時間內會**一直回「建立當下的空白快取」**，讓你誤判樣板沒套上。
+>
+> 千萬不要一看到 fetch 顯示 `blank-page` 就用 `replace_content` 覆寫——因為你寫完之後，樣板骨架才會被 Notion 補進來，結果變成「你的內容 + 一份空樣板」兩份，頁尾就多出重複的 `說明《作品名稱》/ 影片 / 照片 / 連結參考`。
+>
+> **正確作法**：建立後先等 5 秒，然後 `notion-fetch` 反覆確認，直到 content 裡**實際出現樣板結構**（看得到 `### 《作品名稱》` 說明表、`# 連結參考` 等）再進行 3-2 / 3-3。若連續幾次 fetch 都還是 blank，就再等幾秒重試，不要搶先寫入。
 
 ### 3-2 填寫 Properties
 
