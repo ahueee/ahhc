@@ -125,7 +125,8 @@ lines = raw.split('\n')
 j = next(i for i, l in enumerate(lines) if l.strip().startswith('{'))
 data = json.loads('\n'.join(lines[j:]))
 
-for i, slide in enumerate(data['slides']):
+# 只讀前 10 頁：作品集所需資訊（名稱／場地／展期／尺寸／媒材／介紹）通常都在前段，省 token
+for i, slide in enumerate(data['slides'][:10]):
     texts = []
     for elem in slide.get('pageElements', []):
         for run in elem.get('shape', {}).get('text', {}).get('textElements', []):
@@ -142,8 +143,9 @@ for i, slide in enumerate(data['slides']):
     print(f"Slide {i+1}: {' | '.join(texts)}")
 ```
 
-> 這會印出每頁的所有文字（含表格）。重點看前 5-10 頁，通常作品名稱、場地、展期、尺寸、媒材、介紹都在前段。
-> 若簡報頁數多、資訊分散，把全部頁面文字都掃過一遍再判斷。
+> **只讀前 10 頁**（`data['slides'][:10]`）。作品名稱、場地、展期、尺寸、媒材、介紹幾乎都集中在前段，
+> 前 10 頁足夠完成作品集，可大幅省 token。
+> 只有在前 10 頁明顯缺關鍵資訊時，才把切片放寬（例如 `[:20]`）繼續往後讀。
 
 ### 2-3 判斷作品數量
 
