@@ -263,7 +263,6 @@ for i, slide in enumerate(data['slides']):
 |------|---------|
 | 搜尋 Notion 專案、資料庫 | Notion MCP (`notion-search`, `notion-fetch`) |
 | 建立、更新 Notion 頁面 | Notion MCP (`notion-create-pages`, `notion-update-page`) |
-| 定位 Google Drive 資料夾與 Slides 檔案 | Google Drive MCP (`google_drive_search`) |
-| 讀取 Google Slides 文字內容（優先） | Google Drive MCP (`google_drive_fetch`) |
-| 讀取 Google Slides 文字內容（備案） | Claude in Chrome (`mcp__Claude_in_Chrome__*`) |
+| 定位 Google Drive 資料夾與 Slides 檔案 | gws CLI (`gws drive files list`) |
+| 讀取 Google Slides 文字內容 | gws CLI (`gws slides presentations get`) |
 | 搜尋社群推廣、媒體報導 | WebSearch |
