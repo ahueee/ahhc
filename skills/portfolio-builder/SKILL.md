@@ -268,7 +268,7 @@ for i, slide in enumerate(data['slides'][:10]):
 
 ### 4-3 填入 Notion
 
-- **「社群推廣」**：每個連結一行
+- **「社群推廣」**：分「觀眾分享」與「hashtag／地標入口」兩小段（見 4-1）
 - **「媒體報導」**：bulleted list，格式 `• [標題](URL)`
 - 找不到：填 `（尚無資料）`
 
