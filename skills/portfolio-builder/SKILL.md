@@ -244,6 +244,8 @@ for i, slide in enumerate(data['slides'][:10]):
 - `[artwork_name] [project_name] reels`
 - `[project_name] Facebook`
 
+> 優先收**製作團隊自營**的社群帳號（例如黑川互動媒體藝術官方 IG）；活動主辦的官方帳號可一併附上，但要標明是活動官方、非自營。
+
 ### 4-2 媒體報導
 
 搜尋詞：
