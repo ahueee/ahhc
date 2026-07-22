@@ -239,10 +239,21 @@ for i, slide in enumerate(data['slides'][:10]):
 
 ### 4-1 社群推廣
 
-搜尋詞（多次嘗試不同組合）：
-- `[project_name] site:instagram.com`
-- `[artwork_name] [project_name] reels`
-- `[project_name] Facebook`
+目標是**觀眾的分享**（有拍到、關注這件作品的觀眾在社群發的貼文與 Reels），**不是只丟主辦官方帳號**。
+
+搜尋詞（多組嘗試）：
+- `[artwork_name] [venue] instagram reel`
+- `[project_name] [venue] tiktok OR reels 打卡`
+- `[project_name] [venue] threads OR youtube shorts`
+
+分兩類填入，交使用者逐一點開驗證：
+- **觀眾分享**：搜到的個別貼文／Reels（標註「待驗證是否拍到本作品」）
+- **hashtag／地標入口**：給可瀏覽的入口讓使用者自行翻找，例如
+  `https://www.instagram.com/explore/tags/[活動名]/`、
+  `https://www.instagram.com/explore/locations/[locationId]/`、
+  `https://www.tiktok.com/tag/[活動名]`
+
+> **限制（要主動跟使用者說明）**：純文字搜尋只能撈到文案／hashtag／地標有帶到作品或活動的分享；**「有拍到但文案沒提」的 Reels 抓不到**（無文字可比對、也無法分析影片畫面）。IG／TikTok 多在登入牆後、不被搜尋引擎索引，命中率低。作品可製作者自營帳號（如黑川 IG）當作補充，但要標明非觀眾分享。
 
 ### 4-2 媒體報導
 
